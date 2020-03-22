@@ -17,6 +17,7 @@ class ViewController: UIViewController {
     
     // MARK: - Properties
     var audioPlayer = AVAudioPlayer()
+    private var isFinished: Bool = false
 
     // MARK: - life cycle
     override func viewDidLoad() {
@@ -38,6 +39,8 @@ class ViewController: UIViewController {
         } catch {
             print("Error..")
         }
+        
+        audioPlayer.delegate = self
     }
     
     private func setupAudioBackgroundMode() {
@@ -56,18 +59,22 @@ class ViewController: UIViewController {
 
         // Add handler for Play Command
         commandCenter.playCommand.addTarget { [unowned self] event in
-            print("Play command - is playing: \(self.audioPlayer.isPlaying)")
-            if !self.audioPlayer.isPlaying {
-                self.audioPlayer.play()
-                return .success
+            if !self.isFinished {
+                print("Play command - is playing: \(self.audioPlayer.isPlaying), time: \(self.audioPlayer.currentTime)")
+                if !self.audioPlayer.isPlaying {
+                    self.audioPlayer.play()
+                    return .success
+                }
+                
+                 return .commandFailed
             }
             
-            return .commandFailed
+            return .noSuchContent
         }
 
         // Add handler for Pause Command
         commandCenter.pauseCommand.addTarget { [unowned self] event in
-            print("Pause command - is playing: \(self.audioPlayer.isPlaying)")
+            print("Pause command - is playing: \(self.audioPlayer.isPlaying), time: \(self.audioPlayer.currentTime)")
             if self.audioPlayer.isPlaying {
                 self.audioPlayer.pause()
                 return .success
@@ -100,7 +107,6 @@ class ViewController: UIViewController {
         // Define Now Playing Info
         var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo!
         
-        print(audioPlayer.currentTime)
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = audioPlayer.currentTime
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPause ? 0 : 1
 
@@ -110,6 +116,8 @@ class ViewController: UIViewController {
 
     // MARK: - Actions
     @IBAction func play(_ sender: Any) {
+        self.isFinished = false
+        
         if audioPlayer.isPlaying {
             playPause.setImage(UIImage(named: "play"), for: .normal)
             audioPlayer.pause()
@@ -126,8 +134,15 @@ class ViewController: UIViewController {
     @IBAction func stop(_ sender: Any) {
         audioPlayer.currentTime = 0
         audioPlayer.play()
-        updateNowPlaying(isPause: true)
-        updateNowPlaying(isPause: false)
+//        updateNowPlaying(isPause: true)
+//        updateNowPlaying(isPause: false)
+    }
+}
+
+// MARK: - Extensions
+extension ViewController: AVAudioPlayerDelegate {
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        isFinished = true
     }
 }
 
